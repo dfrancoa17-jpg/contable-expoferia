@@ -263,7 +263,7 @@
                 <i data-lucide="users" class="w-4 h-4 text-emerald-400"></i>
                 <div>
                   <span class="font-bold text-white block">Personas</span>
-                  <span class="text-[9px] text-gray-400">Visitantes + Niños</span>
+                  <span class="text-[9px] text-gray-400">Visitantes</span>
                 </div>
               </div>
               <div class="text-right">
@@ -360,10 +360,6 @@
             <div>
               <label class="text-[10px] text-gray-400">Adulto</label>
               <input type="number" id="cfg-precio-visitante" class="w-full bg-black/40 border border-brand-button rounded-lg px-2 py-1 text-sm font-bold text-white">
-            </div>
-            <div>
-              <label class="text-[10px] text-gray-400">Niño</label>
-              <input type="number" id="cfg-precio-nino" class="w-full bg-black/40 border border-brand-button rounded-lg px-2 py-1 text-sm font-bold text-white">
             </div>
             <div>
               <label class="text-[10px] text-gray-400">Vehículo</label>
@@ -548,7 +544,7 @@ create policy "Acceso publico config" on public.configuracion_feria for all usin
     let appConfig = {
       tasaBs: 45.00,
       precioVisitante: 5.00,
-      precioNino: 2.00,
+      precioNino: 2.00, // Solo para reportes de registros históricos.
       precioVehiculo: 3.00,
       precioMoto: 1.50,
       precioMultidia: 12.00,
@@ -558,7 +554,7 @@ create policy "Acceso publico config" on public.configuracion_feria for all usin
       supabaseKey: 'sb_publishable_9mxn26yz-QauQ3ys7-xwEw_Zd0ljOml'
     };
 
-    let counts = { visitante: 0, nino: 0, vehiculo: 0, moto: 0, multidia: 0 };
+    let counts = { visitante: 0, vehiculo: 0, moto: 0, multidia: 0 };
     let currentRole = null; // 'taquilla' | 'admin'
     let selectedLoginRole = 'taquilla';
     let supabaseClient = null;
@@ -608,7 +604,6 @@ create policy "Acceso publico config" on public.configuracion_feria for all usin
     function actualizarCamposConfiguracionUI() {
       document.getElementById('input-tasa-admin').value = appConfig.tasaBs;
       document.getElementById('cfg-precio-visitante').value = appConfig.precioVisitante;
-      document.getElementById('cfg-precio-nino').value = appConfig.precioNino;
       document.getElementById('cfg-precio-vehiculo').value = appConfig.precioVehiculo;
       document.getElementById('cfg-precio-moto').value = appConfig.precioMoto || 1.50;
       document.getElementById('cfg-precio-multidia').value = appConfig.precioMultidia || 12.00;
@@ -737,13 +732,12 @@ create policy "Acceso publico config" on public.configuracion_feria for all usin
     }
 
     function actualizarVisualesContadores() {
-      document.getElementById('cnt-personas').innerText = counts.visitante + counts.nino;
+      document.getElementById('cnt-personas').innerText = counts.visitante;
       document.getElementById('cnt-vehiculos').innerText = counts.vehiculo;
       document.getElementById('cnt-motos').innerText = counts.moto;
       document.getElementById('cnt-multidia').innerText = counts.multidia;
 
       const totalUsd = (counts.visitante * appConfig.precioVisitante) + 
-                       (counts.nino * appConfig.precioNino) + 
                        (counts.vehiculo * appConfig.precioVehiculo) +
                        (counts.moto * (appConfig.precioMoto || 1.50)) +
                        (counts.multidia * (appConfig.precioMultidia || 12.00));
@@ -757,7 +751,6 @@ create policy "Acceso publico config" on public.configuracion_feria for all usin
     // --- PROCESAMIENTO DE PAGO ---
     function abrirModalPago() {
       const totalUsd = (counts.visitante * appConfig.precioVisitante) + 
-                       (counts.nino * appConfig.precioNino) + 
                        (counts.vehiculo * appConfig.precioVehiculo) +
                        (counts.moto * (appConfig.precioMoto || 1.50)) +
                        (counts.multidia * (appConfig.precioMultidia || 12.00));
@@ -777,7 +770,6 @@ create policy "Acceso publico config" on public.configuracion_feria for all usin
 
     function confirmarRegistroPago(metodoPago) {
       const totalUsd = (counts.visitante * appConfig.precioVisitante) + 
-                       (counts.nino * appConfig.precioNino) + 
                        (counts.vehiculo * appConfig.precioVehiculo) +
                        (counts.moto * (appConfig.precioMoto || 1.50)) +
                        (counts.multidia * (appConfig.precioMultidia || 12.00));
@@ -792,7 +784,6 @@ create policy "Acceso publico config" on public.configuracion_feria for all usin
         timestamp: Date.now(),
         device_id: deviceId,
         visitantes: counts.visitante,
-        ninos: counts.nino,
         vehiculos: counts.vehiculo,
         motos: counts.moto,
         pases_multidia: counts.multidia,
@@ -807,7 +798,7 @@ create policy "Acceso publico config" on public.configuracion_feria for all usin
       localStorage.setItem('cosecha_queue', JSON.stringify(locales));
 
       // Resetear interfaz
-      counts = { visitante: 0, nino: 0, vehiculo: 0, moto: 0, multidia: 0 };
+      counts = { visitante: 0, vehiculo: 0, moto: 0, multidia: 0 };
       actualizarVisualesContadores();
       cerrarModalPago();
       verificarPendientesStorage();
@@ -917,19 +908,19 @@ create policy "Acceso publico config" on public.configuracion_feria for all usin
 
       registros.forEach(r => {
         const vis = r.visitantes || 0;
-        const nin = r.ninos || 0;
+        const ninosHistoricos = r.ninos || 0;
         const veh = r.vehiculos || 0;
         const mot = r.motos || 0;
         const mul = r.pases_multidia || 0;
 
-        const personasReg = vis + nin;
+        const personasReg = vis + ninosHistoricos;
         totPersonas += personasReg;
         totVehiculos += veh;
         totMotos += mot;
         totMultidia += mul;
 
         // Cálculos financieros por rubro
-        dineroPersonasUsd += (vis * appConfig.precioVisitante) + (nin * appConfig.precioNino);
+        dineroPersonasUsd += (vis * appConfig.precioVisitante) + (ninosHistoricos * appConfig.precioNino);
         dineroVehiculosUsd += (veh * appConfig.precioVehiculo);
         dineroMotosUsd += (mot * (appConfig.precioMoto || 1.50));
         dineroMultidiaUsd += (mul * (appConfig.precioMultidia || 12.00));
@@ -1025,7 +1016,7 @@ create policy "Acceso publico config" on public.configuracion_feria for all usin
       }
       let csv = "ID,Fecha,Timestamp,Device,Visitantes,Ninos,Vehiculos,Motos,PasesMultidia,MetodoPago,TotalUSD,TotalBS\n";
       queue.forEach(r => {
-        csv += `"${r.id}","${r.fecha}",${r.timestamp},"${r.device_id}",${r.visitantes},${r.ninos},${r.vehiculos},${r.motos||0},${r.pases_multidia||0},"${r.metodo_pago}",${r.total_usd},${r.total_bs}\n`;
+        csv += `"${r.id}","${r.fecha}",${r.timestamp},"${r.device_id}",${r.visitantes},${r.ninos || 0},${r.vehiculos},${r.motos||0},${r.pases_multidia||0},"${r.metodo_pago}",${r.total_usd},${r.total_bs}\n`;
       });
       const blob = new Blob([csv], { type: 'text/csv' });
       const url = window.URL.createObjectURL(blob);
@@ -1038,7 +1029,6 @@ create policy "Acceso publico config" on public.configuracion_feria for all usin
     // --- CONFIGURACIÓN & SINCRONIZACIÓN REMOTA ---
     function guardarConfiguracion() {
       appConfig.precioVisitante = parseFloat(document.getElementById('cfg-precio-visitante').value) || 0;
-      appConfig.precioNino = parseFloat(document.getElementById('cfg-precio-nino').value) || 0;
       appConfig.precioVehiculo = parseFloat(document.getElementById('cfg-precio-vehiculo').value) || 0;
       appConfig.precioMoto = parseFloat(document.getElementById('cfg-precio-moto').value) || 0;
       appConfig.precioMultidia = parseFloat(document.getElementById('cfg-precio-multidia').value) || 0;
