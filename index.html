@@ -229,7 +229,7 @@
           </div>
         </div>
 
-        <!-- Overall Summary Card -->
+        <!-- Overall Summary Card por Cantidad -->
         <div class="grid grid-cols-4 gap-2">
           <div class="bg-brand-card p-2.5 rounded-xl border border-brand-button/60">
             <span class="text-gray-400 text-[10px] font-semibold block">Personas</span>
@@ -247,7 +247,70 @@
             <span class="text-amber-300 text-[10px] font-semibold block">Pases M.</span>
             <span id="stat-total-multidia" class="font-impact text-xl text-amber-300">0</span>
           </div>
-          <div class="bg-brand-card p-3 rounded-xl border border-brand-button/60 col-span-4 flex justify-between items-center">
+        </div>
+
+        <!-- NEW: Recaudación Desglosada por Rubro -->
+        <div class="bg-brand-card border border-brand-button/60 rounded-2xl p-4 space-y-2.5">
+          <h3 class="text-xs font-bold text-gray-300 uppercase tracking-wider mb-1 flex items-center justify-between">
+            <span>Ingresos por Categoria</span>
+            <span class="text-[10px] text-brand-accent font-normal">USD / Bs</span>
+          </h3>
+
+          <div class="space-y-2 text-xs">
+            <!-- Personas -->
+            <div class="flex justify-between items-center bg-black/40 p-2.5 rounded-xl border border-brand-button/30">
+              <div class="flex items-center gap-2">
+                <i data-lucide="users" class="w-4 h-4 text-emerald-400"></i>
+                <div>
+                  <span class="font-bold text-white block">Personas</span>
+                  <span class="text-[9px] text-gray-400">Visitantes + Niños</span>
+                </div>
+              </div>
+              <div class="text-right">
+                <span id="stat-dinero-personas-usd" class="font-impact text-base text-white block">$0.00</span>
+                <span id="stat-dinero-personas-bs" class="text-[10px] font-semibold text-emerald-400 block">0.00 Bs</span>
+              </div>
+            </div>
+
+            <!-- Vehículos -->
+            <div class="flex justify-between items-center bg-black/40 p-2.5 rounded-xl border border-brand-button/30">
+              <div class="flex items-center gap-2">
+                <i data-lucide="car" class="w-4 h-4 text-blue-400"></i>
+                <span class="font-bold text-white">Vehículos</span>
+              </div>
+              <div class="text-right">
+                <span id="stat-dinero-vehiculos-usd" class="font-impact text-base text-white block">$0.00</span>
+                <span id="stat-dinero-vehiculos-bs" class="text-[10px] font-semibold text-emerald-400 block">0.00 Bs</span>
+              </div>
+            </div>
+
+            <!-- Motos -->
+            <div class="flex justify-between items-center bg-black/40 p-2.5 rounded-xl border border-brand-button/30">
+              <div class="flex items-center gap-2">
+                <i data-lucide="bike" class="w-4 h-4 text-purple-400"></i>
+                <span class="font-bold text-white">Motocicletas</span>
+              </div>
+              <div class="text-right">
+                <span id="stat-dinero-motos-usd" class="font-impact text-base text-white block">$0.00</span>
+                <span id="stat-dinero-motos-bs" class="text-[10px] font-semibold text-emerald-400 block">0.00 Bs</span>
+              </div>
+            </div>
+
+            <!-- Pases Multidía -->
+            <div class="flex justify-between items-center bg-black/40 p-2.5 rounded-xl border border-amber-500/30">
+              <div class="flex items-center gap-2">
+                <i data-lucide="ticket" class="w-4 h-4 text-amber-300"></i>
+                <span class="font-bold text-amber-300">Pases Multidía</span>
+              </div>
+              <div class="text-right">
+                <span id="stat-dinero-multidia-usd" class="font-impact text-base text-amber-300 block">$0.00</span>
+                <span id="stat-dinero-multidia-bs" class="text-[10px] font-semibold text-emerald-400 block">0.00 Bs</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Recaudación Total -->
+          <div class="bg-black/60 p-3 rounded-xl border border-brand-accent/50 flex justify-between items-center mt-2">
             <div>
               <span class="text-gray-400 text-xs font-semibold block">Recaudación Total</span>
               <span id="stat-total-recaudado" class="font-impact text-2xl text-brand-accent">$0.00</span>
@@ -834,6 +897,12 @@ create policy "Acceso publico config" on public.configuracion_feria for all usin
       let totVehiculos = 0;
       let totMotos = 0;
       let totMultidia = 0;
+
+      let dineroPersonasUsd = 0;
+      let dineroVehiculosUsd = 0;
+      let dineroMotosUsd = 0;
+      let dineroMultidiaUsd = 0;
+
       let totUsd = 0;
       let totBs = 0;
 
@@ -847,11 +916,24 @@ create policy "Acceso publico config" on public.configuracion_feria for all usin
       const porDia = {};
 
       registros.forEach(r => {
-        const personasReg = (r.visitantes || 0) + (r.ninos || 0);
+        const vis = r.visitantes || 0;
+        const nin = r.ninos || 0;
+        const veh = r.vehiculos || 0;
+        const mot = r.motos || 0;
+        const mul = r.pases_multidia || 0;
+
+        const personasReg = vis + nin;
         totPersonas += personasReg;
-        totVehiculos += (r.vehiculos || 0);
-        totMotos += (r.motos || 0);
-        totMultidia += (r.pases_multidia || 0);
+        totVehiculos += veh;
+        totMotos += mot;
+        totMultidia += mul;
+
+        // Cálculos financieros por rubro
+        dineroPersonasUsd += (vis * appConfig.precioVisitante) + (nin * appConfig.precioNino);
+        dineroVehiculosUsd += (veh * appConfig.precioVehiculo);
+        dineroMotosUsd += (mot * (appConfig.precioMoto || 1.50));
+        dineroMultidiaUsd += (mul * (appConfig.precioMultidia || 12.00));
+
         totUsd += parseFloat(r.total_usd || 0);
         totBs += parseFloat(r.total_bs || 0);
 
@@ -864,20 +946,38 @@ create policy "Acceso publico config" on public.configuracion_feria for all usin
           porDia[f] = { personas: 0, vehiculos: 0, motos: 0, multidia: 0, usd: 0, bs: 0 };
         }
         porDia[f].personas += personasReg;
-        porDia[f].vehiculos += (r.vehiculos || 0);
-        porDia[f].motos += (r.motos || 0);
-        porDia[f].multidia += (r.pases_multidia || 0);
+        porDia[f].vehiculos += veh;
+        porDia[f].motos += mot;
+        porDia[f].multidia += mul;
         porDia[f].usd += parseFloat(r.total_usd || 0);
         porDia[f].bs += parseFloat(r.total_bs || 0);
       });
 
+      // Cantidades totales
       document.getElementById('stat-total-personas').innerText = totPersonas;
       document.getElementById('stat-total-vehiculos').innerText = totVehiculos;
       document.getElementById('stat-total-motos').innerText = totMotos;
       document.getElementById('stat-total-multidia').innerText = totMultidia;
-      document.getElementById('stat-total-recaudado').innerText = `$${totUsd.toFixed(2)}`;
-      document.getElementById('stat-total-bs').innerText = `${totBs.toLocaleString('es-VE', {minimumFractionDigits: 2})} Bs`;
 
+      // Dinero por categoría (USD & Bs)
+      const tasa = appConfig.tasaBs || 1;
+      document.getElementById('stat-dinero-personas-usd').innerText = `$${dineroPersonasUsd.toFixed(2)}`;
+      document.getElementById('stat-dinero-personas-bs').innerText = `${(dineroPersonasUsd * tasa).toLocaleString('es-VE', {minimumFractionDigits: 2, maximumFractionDigits: 2})} Bs`;
+
+      document.getElementById('stat-dinero-vehiculos-usd').innerText = `$${dineroVehiculosUsd.toFixed(2)}`;
+      document.getElementById('stat-dinero-vehiculos-bs').innerText = `${(dineroVehiculosUsd * tasa).toLocaleString('es-VE', {minimumFractionDigits: 2, maximumFractionDigits: 2})} Bs`;
+
+      document.getElementById('stat-dinero-motos-usd').innerText = `$${dineroMotosUsd.toFixed(2)}`;
+      document.getElementById('stat-dinero-motos-bs').innerText = `${(dineroMotosUsd * tasa).toLocaleString('es-VE', {minimumFractionDigits: 2, maximumFractionDigits: 2})} Bs`;
+
+      document.getElementById('stat-dinero-multidia-usd').innerText = `$${dineroMultidiaUsd.toFixed(2)}`;
+      document.getElementById('stat-dinero-multidia-bs').innerText = `${(dineroMultidiaUsd * tasa).toLocaleString('es-VE', {minimumFractionDigits: 2, maximumFractionDigits: 2})} Bs`;
+
+      // Recaudación General
+      document.getElementById('stat-total-recaudado').innerText = `$${totUsd.toFixed(2)}`;
+      document.getElementById('stat-total-bs').innerText = `${totBs.toLocaleString('es-VE', {minimumFractionDigits: 2, maximumFractionDigits: 2})} Bs`;
+
+      // Métodos de pago
       const metodosContainer = document.getElementById('container-metodos-pago');
       metodosContainer.innerHTML = '';
       Object.keys(metodos).forEach(m => {
@@ -891,6 +991,7 @@ create policy "Acceso publico config" on public.configuracion_feria for all usin
         `;
       });
 
+      // Reporte por días
       const diasContainer = document.getElementById('container-reporte-dias');
       diasContainer.innerHTML = '';
       const fechasOrdenadas = Object.keys(porDia).sort().reverse();
